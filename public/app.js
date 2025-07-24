@@ -544,18 +544,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         companyReportResult.style.display = 'none';
         companyReportSummary.style.display = 'none';
         const tableBody = document.getElementById('companyOrdersTableBody');
-        tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Yüklənir...</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="15" style="text-align:center;">Yüklənir...</td></tr>';
         companyReportResult.style.display = 'block';
         try {
             const response = await fetch(`/api/reports/by-company?company=${encodeURIComponent(selectedCompany)}`);
             if (!response.ok) throw new Error('Sifarişlər yüklənərkən xəta baş verdi.');
             const { orders, summary } = await response.json();
-            currentOrders = orders;
             renderCompanySummary(summary, selectedCompany);
             renderOrdersTable(orders, 'companyOrdersTableBody');
         } catch (error) {
             alert(error.message);
-            tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">${error.message}</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="15" style="text-align:center; color:red;">${error.message}</td></tr>`;
         }
     };
     
@@ -563,21 +562,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!companyReportSummary) return;
         companyReportSummary.innerHTML = '';
         let html = `<div class="stat-card"><h4>${companyName}</h4><p style="font-size: 1.5em; font-weight: 700;">Cəmi ${summary.totalOrders} sifariş</p></div>`;
-        
         Object.keys(summary.totalGelir).forEach(currency => {
-            if (summary.totalAlish[currency] || summary.totalSatish[currency] || summary.totalGelir[currency] || summary.totalDebt[currency]) {
-                html += `
-                    <div class="currency-card">
-                        <h4>Yekun (${currency})</h4>
-                        <p><span>Cəmi Alış:</span> <strong>${(summary.totalAlish[currency] || 0).toFixed(2)}</strong></p>
-                        <p><span>Cəmi Satış:</span> <strong>${(summary.totalSatish[currency] || 0).toFixed(2)}</strong></p>
-                        <p><span>Cəmi Gəlir:</span> <strong class="${summary.totalGelir[currency] < 0 ? 'text-danger' : 'text-success'}">${summary.totalGelir[currency].toFixed(2)}</strong></p>
-                        <p><span>Cəmi Borc:</span> <strong class="text-danger">${summary.totalDebt[currency].toFixed(2)}</strong></p>
-                    </div>
-                `;
+            if (summary.totalGelir[currency] !== 0 || summary.totalDebt[currency] !== 0) {
+                html += `<div class="currency-card"><h4>Yekun (${currency})</h4><p><span>Cəmi Gəlir:</span> <strong class="${summary.totalGelir[currency] < 0 ? 'text-danger' : 'text-success'}">${summary.totalGelir[currency].toFixed(2)}</strong></p><p><span>Cəmi Borc:</span> <strong class="text-danger">${summary.totalDebt[currency].toFixed(2)}</strong></p></div>`;
             }
         });
-        
         companyReportSummary.innerHTML = html;
         companyReportSummary.style.display = 'grid';
     };
@@ -872,6 +861,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (closeButton) closeButton.addEventListener('click', () => modal.style.display = 'none');
     if (closeNoteModalBtn) closeNoteModalBtn.addEventListener('click', () => noteModal.style.display = 'none');
     window.addEventListener('click', (e) => { 
+        if (e.target === modal) modal.style.display = 'none'; 
         if (e.target === noteModal) noteModal.style.display = 'none';
     });
     document.body.addEventListener('input', (e) => { if (e.target.matches('#addOrderForm .cost-input')) calculateTotalCost(); });
