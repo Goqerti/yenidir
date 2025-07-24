@@ -20,6 +20,10 @@ const { requireLogin, requireOwnerRole, requireFinanceOrOwner } = require('./mid
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// --- DÜZƏLİŞ BURADADIR: Proxy-nin arxasında işlədiyimizi bildiririk ---
+// Bu, Render/Fly.io kimi platformalar üçün vacibdir
+app.set('trust proxy', 1);
+
 // --- Middleware Tənzimləmələri ---
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
@@ -30,8 +34,10 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: process.env.NODE_ENV === 'production',
+        // DÜZƏLİŞ BURADADIR: Sessiya cookie-lərini server mühitinə uyğunlaşdırırıq
+        secure: process.env.NODE_ENV === 'production', // Yalnız HTTPS-də cookie göndərilsin
         httpOnly: true,
+        sameSite: 'lax', // Təhlükəsizlik üçün
         maxAge: 24 * 60 * 60 * 1000 // 24 saat
     }
 }));
@@ -105,7 +111,6 @@ wss.on('connection', (ws) => {
 
 server.listen(PORT, () => {
     initializeApp();
-    // DÜZƏLİŞ BURADADIR: telegramService.init() sətri silindi.
     startBackupSchedule(2); // Hər 2 dəqiqədən bir yedəkləmə
     console.log(`Server http://localhost:${PORT} ünvanında işləyir`);
 });
