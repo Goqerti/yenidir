@@ -2,7 +2,7 @@
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
-const http = require('http');
+const http = require('http'); // Bu sətri əlavə edirik
 const WebSocket = require('ws');
 const fs = require('fs');
 require('dotenv').config();
@@ -20,8 +20,7 @@ const { requireLogin, requireOwnerRole, requireFinanceOrOwner } = require('./mid
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- DÜZƏLİŞ BURADADIR: Proxy-nin arxasında işlədiyimizi bildiririk ---
-// Bu, Render/Fly.io kimi platformalar üçün vacibdir
+// Proxy-nin arxasında işlədiyimizi bildiririk
 app.set('trust proxy', 1);
 
 // --- Middleware Tənzimləmələri ---
@@ -34,10 +33,9 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        // DÜZƏLİŞ BURADADIR: Sessiya cookie-lərini server mühitinə uyğunlaşdırırıq
-        secure: process.env.NODE_ENV === 'production', // Yalnız HTTPS-də cookie göndərilsin
+        secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        sameSite: 'lax', // Təhlükəsizlik üçün
+        sameSite: 'lax',
         maxAge: 24 * 60 * 60 * 1000 // 24 saat
     }
 }));
@@ -95,7 +93,7 @@ wss.on('connection', (ws) => {
         const parsedMessage = JSON.parse(message);
         const chatEntry = {
             id: Date.now().toString(),
-            sender: "User", // Bu hissə gələcəkdə istifadəçi sessiyası ilə əlaqələndirilməlidir
+            sender: "User", 
             text: parsedMessage.text,
             timestamp: new Date().toISOString()
         };
@@ -108,6 +106,30 @@ wss.on('connection', (ws) => {
         });
     });
 });
+
+// --- YENİ: Render Oyaq Saxlama Məntiqi ---
+// Yalnız serverdə işləyərkən aktiv olsun
+if (process.env.NODE_ENV === 'production') {
+    const PING_INTERVAL = 14 * 60 * 1000; // 14 dəqiqə
+    const selfPingUrl = process.env.RENDER_EXTERNAL_URL;
+
+    if (selfPingUrl) {
+        setInterval(() => {
+            console.log(`Pinging server at ${selfPingUrl} to keep it awake...`);
+            http.get(selfPingUrl, (res) => {
+                if (res.statusCode === 200) {
+                    console.log('Ping successful.');
+                } else {
+                    console.error(`Ping failed with status code: ${res.statusCode}`);
+                }
+            }).on('error', (err) => {
+                console.error('Ping error:', err.message);
+            });
+        }, PING_INTERVAL);
+    } else {
+        console.warn('RENDER_EXTERNAL_URL not set. Self-pinging is disabled.');
+    }
+}
 
 server.listen(PORT, () => {
     initializeApp();
